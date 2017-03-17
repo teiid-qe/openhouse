@@ -3,7 +3,7 @@ var map;
 function initMap() {
     var base = {lat: 49.2309837, lng: 16.5767087};
     map = new google.maps.Map(document.getElementById('map'), {
-        zoom: 12,
+        zoom: 14,
         center: base
     });
 }
@@ -26,6 +26,9 @@ function showWiki(){
 }
 function showGeo(){
     console.log("Showing Geo.");
+}
+function exportToGoogle(){
+    console.log("Exporting to Google Sheet.");
 }
 function invokeOData(url){
     console.log("Invoking OData " + url);

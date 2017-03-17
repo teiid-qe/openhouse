@@ -31,10 +31,9 @@
                         </resource>
                         <resource>
                             <directory>src/main/webapp</directory>
-                            <includes>
-                                <include>script.js</include>
-                                <include>style.css</include>
-                            </includes>
+                            <excludes>
+                                <exclude>index.html</exclude>
+                            </excludes>
                             <filtering>false</filtering>
                         </resource>
                     </webResources>

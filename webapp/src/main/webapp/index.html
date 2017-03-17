@@ -6,6 +6,7 @@
     <base href="${index.base.href}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="style.css" rel="stylesheet">
+    <link href="favicon.ico" rel="icon" type="image/x-icon" />
     <script src="script.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
     <script async defer src="https://maps.googleapis.com/maps/api/js?key=${api.key}&callback=initMap"></script>
@@ -17,7 +18,8 @@
         <div id="buttons">
             <button onclick="showRoute();">Show route</button><br>
             <button onclick="showWiki();">Show wiki</button><br>
-            <button onclick="showGeo();">Show geo</button>
+            <button onclick="showGeo();">Show geo</button><br>
+            <button onclick="exportToGoogle();">Export to Google Sheet</button>
         </div>
     </main>
 </body>
