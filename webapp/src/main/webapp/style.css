@@ -1,0 +1,39 @@
+main{
+  margin-left: auto;
+  margin-right: auto;
+  padding: 20px;
+  max-width: 800px;
+  height: 100vh;
+  background-color: #F5F5DC;
+}
+
+h1{
+  text-align: center;
+}
+
+button{
+  cursor: pointer;
+  border: none;
+  background-color: #00FF00;
+  color: black;
+  width: 100%;
+  font-size: 20px;
+  padding: 20px 30px;
+  margin: 2px;
+  width: 250px;
+}
+
+button:hover{
+  background-color: #00FFFF;
+}
+
+#buttons{
+  margin-top: 25px;
+  text-align: center;
+}
+
+#map {
+  width: 100%;
+  height: 400px;
+  background-color: grey;
+ }

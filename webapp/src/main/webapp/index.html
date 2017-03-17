@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Teiid</title>
+    <base href="${index.base.href}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="style.css" rel="stylesheet">
+    <script src="script.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=${api.key}&callback=initMap"></script>
+</head>
+<body>
+    <main>
+        <h1>Teiid Demo</h1>
+        <div id="map"></div>
+        <div id="buttons">
+            <button onclick="showRoute();">Show route</button><br>
+            <button onclick="showWiki();">Show wiki</button><br>
+            <button onclick="showGeo();">Show geo</button>
+        </div>
+    </main>
+</body>
+</html>
