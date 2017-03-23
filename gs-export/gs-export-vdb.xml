@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<vdb name="gs-export" version="1">
+    <description>Data exported from Open House app</description>
+    <model name="Source" type="PHYSICAL" visible="false">
+        <source name="Source" translator-name="google-spreadsheet" connection-jndi-name="java:/gs-export" />
+				<metadata type="DDL">
+        <![CDATA[
+        CREATE FOREIGN TABLE WikiData(
+        intkey integer OPTIONS (NATIVE_TYPE 'NUMBER'),
+        link string(10) OPTIONS (NATIVE_TYPE 'STRING'),
+        location string(10) OPTIONS (NATIVE_TYPE 'STRING')
+        ) OPTIONS (UPDATABLE 'TRUE', NAMEINSOURCE 'WikiData');
+        ]]>
+				</metadata>
+		    </model>
+    <model name="CRUD" type="VIRTUAL">
+        <metadata type="DDL">
+        <![CDATA[
+        CREATE VIEW WikiData (
+        link string,
+        location string)
+        OPTIONS (UPDATABLE 'TRUE') 
+        AS
+        SELECT
+            link, location
+        FROM
+            Source.WikiData;
+
+        CREATE TRIGGER ON WikiData INSTEAD OF INSERT AS FOR EACH ROW
+        BEGIN ATOMIC
+            INSERT INTO Source.WikiData (link, location) VALUES
+                (NEW.link, NEW.location);
+        END;
+        ]]>
+        </metadata>
+      </model>
+</vdb>
