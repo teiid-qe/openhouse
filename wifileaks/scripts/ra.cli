@@ -1,5 +1,7 @@
+batch
 /subsystem=resource-adapters/resource-adapter=GeoData:add(module=org.jboss.teiid.resource-adapter.file)
 /subsystem=resource-adapters/resource-adapter=GeoData/connection-definitions=GeoData:add(class-name=org.teiid.resource.adapter.file.FileManagedConnectionFactory, jndi-name=java:/GeoData_DS)
 /subsystem=resource-adapters/resource-adapter=GeoData/connection-definitions=GeoData/config-properties=AllowParentPaths:add(value=false)
 /subsystem=resource-adapters/resource-adapter=GeoData/connection-definitions=GeoData/config-properties=ParentDirectory:add(value=${wifileaks.files.dir})
 /subsystem=resource-adapters/resource-adapter=GeoData:activate()
+run-batch
