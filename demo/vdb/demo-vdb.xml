@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vdb name="demo" version="1">
+    <import-vdb name="strava" version="1" />
+    <import-vdb name="wifileaks" version="1" />
+
+    <model name="Demo" type="VIRTUAL">
+        <metadata type="DDL"><![CDATA[
+            CREATE VIEW wifi_spots_around_route(activity_id integer,RESPONSE clob) AS
+            WITH cte AS (SELECT a.id, ST_CONVEXHULL(a.route) as area FROM activity_geo a) SELECT a.id, JSONARRAY_AGG(JSONOBJECT(s.ssid,ST_AsGeoJSON(s.position))) FROM cte a, wifi_spots s WHERE ST_CONTAINS(a.area,s.position) GROUP BY a.id;
+            CREATE VIEW media_wikis_around_route(activity_id integer, RESPONSE clob) AS
+            SELECT a.id, JSONARRAY_AGG(JSONOBJECT(m.id, m.title, m.url, m.img_url, ST_AsGeoJSON(m.position))) FROM activity_geo a, media_wiki m WHERE ST_CONTAINS(ST_CONVEXHULL(a.route),m.position) GROUP BY a.id;
+        ]]></metadata>
+    </model>
+</vdb>

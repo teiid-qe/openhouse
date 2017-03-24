@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vdb name="strava" version="1">
+    <model name="strava">
+        <property name="importer.importWSDL" value="false" />
+        <source name="strava" translator-name="rest"
+            connection-jndi-name="java:/strava-ds" />
+    </model>
+    <model name="Activity" type="VIRTUAL">
+        <metadata type="DDL"><![CDATA[
+        CREATE VIEW activity_list(id integer PRIMARY KEY, name string, created_at string, latlng boolean) AS
+        SELECT activity.id, activity.name, activity.created_at, latlng.start_lng IS NOT NULL FROM (call strava.invokeHTTP(endpoint=>'activities', action=>'GET')) response,
+XMLTABLE('/strava/strava' passing JSONTOXML('strava', response.result) columns
+            id integer PATH 'id',
+            created_at string PATH 'start_date',
+            name string PATH 'name',
+            start_latlng string[] PATH 'start_latlng') activity, arraytable(activity.start_latlng COLUMNS start_lat string,start_lng string) latlng;
+
+        CREATE VIEW activity_geo(id integer PRIMARY KEY, route geometry) AS
+        SELECT t1.id, t2.route FROM (SELECT id FROM activity_list WHERE latlng=true) as t1, TABLE(call activity_geo_unsafe(t1.id)) as t2;
+
+        CREATE VIEW activity_geo_geojson(id integer PRIMARY KEY, route clob) AS
+        SELECT id, ST_AsGeoJSON(route) from activity_geo;
+
+        CREATE VIRTUAL PROCEDURE activity_geo_unsafe(in id integer) returns table (activity_id integer, route geometry) AS
+        BEGIN
+            DECLARE string endpoint;
+            endpoint='activities/' || id || '/streams/latlng?resolution=low';
+            SELECT id, ST_GeomFromText('LINESTRING (' || CAST(STRING_AGG(geo.lat || ' ' || geo.lng, ',') AS STRING) || ')') as route FROM (call strava.invokeHTTP(endpoint=>endpoint, action=>'GET')) response,
+            XMLTABLE('/stream/stream/data[preceding-sibling::type[text()=''latlng'']]' passing JSONTOXML('stream', response.result) columns
+                lat string PATH 'data[1]',
+                lng string PATH 'data[2]') as geo;
+        END
+        ]]></metadata>
+    </model>
+    <translator name="rest" type="ws">
+        <property name="DefaultBinding" value="HTTP" />
+        <property name="DefaultServiceMode" value="MESSAGE" />
+    </translator>
+</vdb>
