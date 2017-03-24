@@ -3,34 +3,31 @@
     <description>Data exported from Open House app</description>
     <model name="Source" type="PHYSICAL" visible="false">
         <source name="Source" translator-name="google-spreadsheet" connection-jndi-name="java:/gs-export" />
-				<metadata type="DDL">
+        <metadata type="DDL">
         <![CDATA[
         CREATE FOREIGN TABLE WikiData(
-        intkey integer OPTIONS (NATIVE_TYPE 'NUMBER'),
-        link string(10) OPTIONS (NATIVE_TYPE 'STRING'),
-        location string(10) OPTIONS (NATIVE_TYPE 'STRING')
+        title string OPTIONS (NATIVE_TYPE 'STRING'),
+        link string OPTIONS (NATIVE_TYPE 'STRING'),
+        lat double OPTIONS (NATIVE_TYPE 'NUMBER'),
+        lon double OPTIONS (NATIVE_TYPE 'NUMBER')
         ) OPTIONS (UPDATABLE 'TRUE', NAMEINSOURCE 'WikiData');
         ]]>
-				</metadata>
-		    </model>
-    <model name="CRUD" type="VIRTUAL">
+        </metadata>
+    </model>
+    <model name="Export" type="VIRTUAL">
         <metadata type="DDL">
         <![CDATA[
         CREATE VIEW WikiData (
+        title string,
         link string,
-        location string)
-        OPTIONS (UPDATABLE 'TRUE') 
+        lat double,
+        lon double
+        ) OPTIONS (UPDATABLE 'TRUE') 
         AS
         SELECT
-            link, location
+             title, link, lat, lon
         FROM
             Source.WikiData;
-
-        CREATE TRIGGER ON WikiData INSTEAD OF INSERT AS FOR EACH ROW
-        BEGIN ATOMIC
-            INSERT INTO Source.WikiData (link, location) VALUES
-                (NEW.link, NEW.location);
-        END;
         ]]>
         </metadata>
       </model>
