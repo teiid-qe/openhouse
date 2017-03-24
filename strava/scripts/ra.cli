@@ -1,0 +1,7 @@
+batch
+/subsystem=resource-adapters/resource-adapter=StravaWs:add(module=org.jboss.teiid.resource-adapter.webservice)
+/subsystem=resource-adapters/resource-adapter=StravaWs/connection-definitions=StravaWs:add(class-name=org.teiid.resource.adapter.ws.WSManagedConnectionFactory, jndi-name=java:/strava-ds, security-domain-and-application=sd-oauth2-strava)
+/subsystem=resource-adapters/resource-adapter=StravaWs/connection-definitions=StravaWs/config-properties=SecurityType:add(value=OAuth)
+/subsystem=resource-adapters/resource-adapter=StravaWs/connection-definitions=StravaWs/config-properties=EndPoint:add(value=${strava.api.endpoint})
+/subsystem=resource-adapters/resource-adapter=StravaWs:activate()
+run-batch
