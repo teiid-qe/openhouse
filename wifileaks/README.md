@@ -1,6 +1,6 @@
 # Wifileaks
 
-[Homepage] http://www.wifileaks.cz/index.php
+[Homepage](http://www.wifileaks.cz/index.php)
 
 ## About
 Wifileaks is a community project that provides a list of free wifi spots.
