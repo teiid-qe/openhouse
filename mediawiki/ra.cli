@@ -1,0 +1,6 @@
+batch
+/subsystem=resource-adapters/resource-adapter=rest-wiki:add(module=org.jboss.teiid.resource-adapter.webservice,transaction-support=NoTransaction)
+/subsystem=resource-adapters/resource-adapter=rest-wiki/connection-definitions=rest-wiki:add(jndi-name=java:/rest-wiki, class-name=org.teiid.resource.adapter.ws.WSManagedConnectionFactory, enabled=true, use-java-context=true)
+/subsystem=resource-adapters/resource-adapter=rest-wiki/connection-definitions=rest-wiki/config-properties=EndPoint:add(value=https://en.wikipedia.org/w/api.php)
+/subsystem=resource-adapters/resource-adapter=rest-wiki:activate()
+run-batch
