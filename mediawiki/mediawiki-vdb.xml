@@ -19,8 +19,14 @@
                 DECLARE double latDiff = ST_X(ringPoint) - ST_X(center);
                 DECLARE double lonDiff = ST_Y(ringPoint) - ST_Y(center);
                 
-                DECLARE bigdecimal a = POWER(SIN(latDiff/2), 2) + COS(ST_X(center)) * COS(ST_X(ringPoint)) * POWER(SIN(lonDiff/2),2);
+                DECLARE bigdecimal a = POWER(SIN(RADIANS(latDiff/2)), 2) + COS(RADIANS(ST_X(center))) * COS(RADIANS(ST_X(ringPoint))) * POWER(SIN(RADIANS(lonDiff/2)),2);
                 DECLARE bigdecimal distance = 6371000 * 2 * ATAN2(SQRT(a), SQRT(1-a));
+                distance = distance*1.5;
+
+                IF (distance > 10000)
+                BEGIN
+                    distance = 10000;
+                END
                 
                 DECLARE string coord = ST_X(center) || '%7C' || ST_Y(center) || '&ggsradius=' || CONVERT(distance, integer);
                 
