@@ -7,19 +7,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="style.css" rel="stylesheet">
     <link href="favicon.ico" rel="icon" type="image/x-icon" />
-    <script src="script.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="script.js"></script>
     <script async defer src="https://maps.googleapis.com/maps/api/js?key=${api.key}&callback=initMap"></script>
 </head>
 <body>
     <main>
         <h1>Teiid Demo</h1>
+        <hr>
+        <div id="message"></div>
+        <div id="pathSelectorDiv">
+            Retrieving paths.
+        </div>
+        <hr>
         <div id="map"></div>
-        <div id="buttons">
-            <button onclick="showRoute();">Show route</button><br>
-            <button onclick="showWiki();">Show wiki</button><br>
-            <button onclick="showGeo();">Show geo</button><br>
-            <button onclick="exportToGoogle();">Export to Google Sheet</button>
+        <div id="paths">
+            <div id="wikiLogo" class="logo inline actionable" onClick="toggleWiki();">
+                <img alt="Wikipedia" title="Show Wikipedia info" height="100" align="middle"
+                     src="https://upload.wikimedia.org/wikipedia/en/thumb/8/80/Wikipedia-logo-v2.svg/263px-Wikipedia-logo-v2.svg.png">
+            </div>
+            <div id="wifiLogo" class="logo inline actionable" onClick="toggleWiFi();">
+                <img alt="Wi-Fi" title="Show free Wi-Fi spots info" height="100" align="middle"
+                     src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Wi-Fi_Logo.svg/304px-Wi-Fi_Logo.svg.png">
+            </div>
+            <div>
+                <button class="actionable" onclick="exportToGoogle();">Export to Google Sheet</button>
+            </div>
         </div>
     </main>
 </body>

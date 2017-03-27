@@ -2,38 +2,69 @@ main{
   margin-left: auto;
   margin-right: auto;
   padding: 20px;
-  max-width: 800px;
-  height: 100vh;
-  background-color: #F5F5DC;
-}
-
-h1{
-  text-align: center;
-}
-
-button{
-  cursor: pointer;
-  border: none;
-  background-color: #00FF00;
-  color: black;
-  width: 100%;
   font-size: 20px;
-  padding: 20px 30px;
-  margin: 2px;
-  width: 350px;
-}
-
-button:hover{
-  background-color: #00FFFF;
-}
-
-#buttons{
-  margin-top: 25px;
   text-align: center;
 }
-
-#map {
+#paths{
+  margin-top: 25px;
+}
+#map{
   width: 100%;
   height: 400px;
   background-color: grey;
- }
+}
+#pathSelectorDiv{
+  padding-top: 10px;
+  padding-bottom: 20px;
+}
+.inline{
+  display: inline-block;
+}
+.actionable{
+  cursor: pointer;
+}
+.actionable:hover{
+  background-color: #A9BCF5;
+}
+.logo{
+  margin: 15px 20px;
+  padding: 20px;
+  width: 160px;
+}
+.path{
+  margin: 10px 15px;
+}
+button{
+  padding: 10px 15px;
+  background-color: inherit;
+  font-size: inherit;
+  border-width: 3px;
+  border-style: solid;
+  border-color: black;
+}
+.selected{
+  background-color: #00ff80;
+}
+#message{
+  border-style: solid;
+  border-width: 4px;
+  border-color: black;
+  position: fixed;
+  margin: 50px;
+  top: 0px;
+  right: 0px;
+  width: 200px;
+  background-color: transparent;
+  display: none;
+  z-index: 999;
+}
+.partMessage{
+  padding: 15px;
+  margin: 0px;
+}
+.errorMessage{
+  background-color: rgba(255, 0, 0, 0.25);
+}
+.infoMessage{
+  background-color: rgba(0, 255, 0, 0.25);
+}
