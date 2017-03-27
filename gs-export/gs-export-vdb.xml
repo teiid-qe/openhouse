@@ -5,13 +5,13 @@
         <source name="Source" translator-name="google-spreadsheet" connection-jndi-name="java:/gs-export" />
         <metadata type="DDL">
         <![CDATA[
-				CREATE FOREIGN TABLE WikiData(
-				pageid integer OPTIONS (NATIVE_TYPE 'NUMBER'),
-				title string OPTIONS (NATIVE_TYPE 'STRING'),
-			  lat double OPTIONS (NATIVE_TYPE 'NUMBER'),
-				lon double OPTIONS (NATIVE_TYPE 'NUMBER'),
-				url string OPTIONS (NATIVE_TYPE 'STRING'),
-       	image string OPTIONS (NATIVE_TYPE 'STRING')
+        CREATE FOREIGN TABLE WikiData(
+        pageid integer OPTIONS (NATIVE_TYPE 'NUMBER'),
+        title string OPTIONS (NATIVE_TYPE 'STRING'),
+        lat bigdecimal OPTIONS (NATIVE_TYPE 'NUMBER'),
+        lon bigdecimal OPTIONS (NATIVE_TYPE 'NUMBER'),
+        url string OPTIONS (NATIVE_TYPE 'STRING'),
+        image string OPTIONS (NATIVE_TYPE 'STRING')
         ) OPTIONS (UPDATABLE 'TRUE', NAMEINSOURCE 'WikiData');
         ]]>
         </metadata>
@@ -19,20 +19,20 @@
     <model name="Export" type="VIRTUAL">
         <metadata type="DDL">
         <![CDATA[
-				CREATE VIEW WikiData (
-				pageid integer PRIMARY KEY,
-       	title string,
-        lat double,
-				lon double,
-				url string,
-				image string
+        CREATE VIEW WikiData (
+        pageid integer PRIMARY KEY,
+        title string,
+        lat bigdecimal,
+        lon bigdecimal,
+        url string,
+        image string
         ) OPTIONS (UPDATABLE 'TRUE') 
         AS
-				SELECT
+        SELECT
             pageid, title, lat, lon, url, image
         FROM
             Source.WikiData;
         ]]>
         </metadata>
-      </model>
+    </model>
 </vdb>
