@@ -6,10 +6,12 @@
         <metadata type="DDL">
         <![CDATA[
         CREATE FOREIGN TABLE WikiData(
+        pageid integer OPTIONS (NATIVE_TYPE 'NUMBER'),
         title string OPTIONS (NATIVE_TYPE 'STRING'),
-        link string OPTIONS (NATIVE_TYPE 'STRING'),
-        lat double OPTIONS (NATIVE_TYPE 'NUMBER'),
-        lon double OPTIONS (NATIVE_TYPE 'NUMBER')
+        lat bigdecimal OPTIONS (NATIVE_TYPE 'NUMBER'),
+        lon bigdecimal OPTIONS (NATIVE_TYPE 'NUMBER'),
+        url string OPTIONS (NATIVE_TYPE 'STRING'),
+        image string OPTIONS (NATIVE_TYPE 'STRING')
         ) OPTIONS (UPDATABLE 'TRUE', NAMEINSOURCE 'WikiData');
         ]]>
         </metadata>
@@ -18,17 +20,19 @@
         <metadata type="DDL">
         <![CDATA[
         CREATE VIEW WikiData (
+        pageid integer PRIMARY KEY,
         title string,
-        link string,
-        lat double,
-        lon double
+        lat bigdecimal,
+        lon bigdecimal,
+        url string,
+        image string
         ) OPTIONS (UPDATABLE 'TRUE') 
         AS
         SELECT
-             title, link, lat, lon
+            pageid, title, lat, lon, url, image
         FROM
             Source.WikiData;
         ]]>
         </metadata>
-      </model>
+    </model>
 </vdb>
