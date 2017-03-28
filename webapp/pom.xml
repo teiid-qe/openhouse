@@ -10,7 +10,6 @@
     <packaging>war</packaging>
     <properties>
         <api.key></api.key>
-        <index.base.href>/${project.artifactId}/</index.base.href>
     </properties>
     <build>
         <plugins>

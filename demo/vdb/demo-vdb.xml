@@ -16,10 +16,10 @@
 
                 DECLARE geometry center = ST_Centroid(convexHull);
                 DECLARE geometry ringPoint = ST_EndPoint(ST_ExteriorRing(convexHull));
-                
+
                 DECLARE double latDiff = ST_X(ringPoint) - ST_X(center);
                 DECLARE double lonDiff = ST_Y(ringPoint) - ST_Y(center);
-                
+
                 DECLARE bigdecimal a = POWER(SIN(RADIANS(latDiff/2)), 2) + COS(RADIANS(ST_X(center))) * COS(RADIANS(ST_X(ringPoint))) * POWER(SIN(RADIANS(lonDiff/2)),2);
                 DECLARE bigdecimal distance = 6371000 * 2 * ATAN2(SQRT(a), SQRT(1-a));
                 distance = distance*1.5;
@@ -28,11 +28,8 @@
                 BEGIN
                     distance = 10000;
                 END
-                
+
                 DECLARE string coord = ST_Y(center) || '%7C' || ST_X(center) || '&ggsradius=' || CONVERT(distance, integer);
-                
-                
-                RAISE SQLWARNING SQLEXCEPTION (query || coord);
                 
                 result = call WS.invokeHTTP(action=>'GET', endpoint=>query || coord);
                 
@@ -146,14 +143,11 @@ XMLTABLE('/strava/strava' passing JSONTOXML('strava', response.result) columns
             FROM cte a, wifi_spots w 
             WHERE st_distance(a.route, w.position) < 0.008
             GROUP BY a.id;
-           
-
 
             CREATE VIEW activity_route(id integer PRIMARY KEY, RESPONSE clob) AS
             SELECT 
                 a.id, JSONOBJECT('Feature' as "type", ST_AsGeoJson(a.route) as "geometry") as route FROM activity_geo a;
-            
-            
+
             CREATE VIEW wikis_around_route(activity_id integer PRIMARY KEY, RESPONSE clob) AS
             WITH cte AS (
                 SELECT a.id, ST_Envelope(a.route) as area FROM activity_geo a
@@ -178,14 +172,14 @@ XMLTABLE('/strava/strava' passing JSONTOXML('strava', response.result) columns
             CREATE VIRTUAL FUNCTION geography_distance(g1 geometry, g2 geometry) RETURNS bigdecimal AS BEGIN
                 DECLARE double latDiff = ST_X(g1) - ST_X(g2);
                 DECLARE double lonDiff = ST_Y(g1) - ST_Y(g2);
-                
+
                 DECLARE bigdecimal a = POWER(SIN(RADIANS(latDiff/2)), 2) + COS(RADIANS(ST_X(g1))) * COS(RADIANS(ST_X(g2))) * POWER(SIN(RADIANS(lonDiff/2)),2);
                 DECLARE bigdecimal distance = 6371000 * 2 * ATAN2(SQRT(a), SQRT(1-a));
-                
+
                 RETURN distance;
             END;
-            
-            
+
+
             CREATE VIRTUAL PROCEDURE save_wiki_articles(activity_id integer) RETURNS string AS BEGIN
                 INSERT INTO GoogleSheetsExport.WikiData(pageid, title, lat, lon, url, image) 
                     SELECT w.page_id, w.title, w.lat, w.lon, w.url, w.image_url

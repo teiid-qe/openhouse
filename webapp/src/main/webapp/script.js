@@ -5,14 +5,19 @@ var currentFeatures = {"currentWifi": null, "currentWiki": null};
 var lastEven = null;
 
 $(document).ready(function(){
-    $.ajaxSetup({headers: {'Authorization':'Basic dGVpaWRVc2VyOmR2ZHZkdjAh', 'Accept':'application/json', 'Content-Type':'application/json'}});
-    invokeOData('Activity/activity_list?$select=name,id', function(data){
+    $.ajaxSetup({
+        headers: {'Authorization':'Basic dXNlcjp1c2Vy', 'Accept':'application/json', 'Content-Type':'application/json'},
+        error: function(xhr, status, error) {
+                displayError("An error occurred: " + status + " Error: " + error);
+            }
+    });
+    invokeOData('Activity/activity_list?$select=name,id,created_at', function(data){
         var elem = $("#pathSelectorDiv").empty();
         if(data.value.length === 0){
             elem.text("No paths to show")
         } else {
             for(i = 0; i < data.value.length; i++){
-                var val = data.value[i].name;
+                var val = data.value[i].name + " (" + data.value[i].created_at + ")";
                 var activityId = data.value[i].id;
                 var id = "pathButton" + i;
                 var option = $("<button></button>");
@@ -28,71 +33,75 @@ $(document).ready(function(){
         }
     });
 });
-
 function initMap() {
     map = new google.maps.Map(document.getElementById('map'), {zoom: 13, center: {lat: 49.2309837, lng: 16.5767087}});
     var win = new google.maps.InfoWindow({pixelOffset: {width: 0, height: -30}});
     map.data.addListener('click', function(event) {
-	  var featureName = event.feature.getProperty('name');
-	  if(featureName){
-		  win.setContent(featureName);
-		  win.setPosition({lat: event.latLng.lat(), lng: event.latLng.lng()});
-		  win.open(map);
-	  } else {
-		  win.close();	
-	  }
-	});
+        var featureName = event.feature.getProperty('name');
+        if(featureName){
+            var url = event.feature.getProperty('url');
+            var content = '<p class="featureName">' + featureName + '</p>';
+            if(url){
+                content += '<p><a href="' + url + '" target="_blank">Go to Wikipedia</a></p>';
+            }
+            win.setContent(content);
+            win.setPosition({lat: event.latLng.lat(), lng: event.latLng.lng()});
+            win.open(map);
+        } else {
+            win.close();
+        }
+    });
 }
-
 function toggleWiki(featureButton){
-	loadAndToggleFeatures("currentWiki", "wikis_around_route", "Wiki articles", featureButton);
+  loadAndToggleFeatures("currentWiki", "wikis_around_route", "Wiki articles", featureButton);
 }
-
 function toggleWiFi(featureButton){
-	loadAndToggleFeatures("currentWifi", "wifi_spots_around_route", "WiFi Points", featureButton);
+  loadAndToggleFeatures("currentWifi", "wifi_spots_around_route", "WiFi Points", featureButton);
 }
-
-
 function loadAndToggleFeatures(featureName, featureTable, featureDescription, featureButton){
-	console.log(featureButton);
-	if(currentFeatures[featureName] == null) {
-		var messageElem = showMessage("Loading " + featureDescription);
-		var act = getSelectedActivity();
-	    invokeOData("Demo/" + featureTable + "(" + act + ")/RESPONSE", function(data){
-	        var parsedData = JSON.parse(data);
-	        currentFeatures[featureName] = map.data.addGeoJson(parsedData);
-	        $(featureButton).addClass("selected");
-	        hideMessage(messageElem);
-	    });
-	} else {
-		var featureShown = toggleFeatures(currentFeatures[featureName]);
-		$(featureButton).toggleClass("selected", featureShown);
-	}
+  if(currentFeatures[featureName] == null) {
+      var act = getSelectedActivity();
+      if(act === undefined){
+          return;
+      }
+      var messageElem = showMessage("Loading " + featureDescription);
+      invokeOData("Demo/" + featureTable + "(" + act + ")/RESPONSE", function(data){
+            var parsedData = JSON.parse(data);
+            currentFeatures[featureName] = map.data.addGeoJson(parsedData);
+            $(featureButton).addClass("selected");
+            hideMessage(messageElem);
+      });
+  } else {
+      var featureShown = toggleFeatures(currentFeatures[featureName]);
+      $(featureButton).toggleClass("selected", featureShown);
+  }
 }
-
 function toggleFeatures(featureList) {
-	if(featureList.length > 0){
-		if(map.data.contains(featureList[0])){
-			featureList.forEach(function(feature){
-				map.data.remove(feature);
-			});
-			return false;
-		} else {
-			featureList.forEach(function(feature){
-				map.data.add(feature);
-			});
-			return true;
-		}
-	}
-	return false;
+    if(featureList.length > 0){
+        if(map.data.contains(featureList[0])){
+            featureList.forEach(function(feature){
+                map.data.remove(feature);
+            });
+            return false;
+        } else {
+            featureList.forEach(function(feature){
+                map.data.add(feature);
+            });
+            return true;
+        }
+    }
+    return false;
 }
 
 function exportToGoogle() {
-	var messageElem = showMessage("Exporting information to Google Sheet");
-	invokeODataAction("Demo/save_wiki_articles(activity_id=" + getSelectedActivity() + ")", function(data) {
-	        hideMessage(messageElem);
-		});
-
+    var act = getSelectedActivity();
+    if(act === undefined){
+        return;
+    }
+    var messageElem = showMessage("Exporting information from Wikipedia to Google Sheet");
+    invokeODataAction("Demo/save_wiki_articles(activity_id=" + act + ")", function(data) {
+            hideMessage(messageElem);
+    });
 }
 function selectPath(id){
     if(!$("#" + id).hasClass("selectedPath")){
@@ -103,12 +112,12 @@ function selectPath(id){
 }
 
 function showPath(){
-	var messageElem = showMessage("Loading path");
-	var act = getSelectedActivity();
+    var messageElem = showMessage("Loading path");
+    var act = getSelectedActivity();
     invokeOData("Demo/activity_route(" + act + ")/RESPONSE", function(data){
-    	
+      
         map.data.forEach(function(feat){
-        	map.data.remove(feat);
+          map.data.remove(feat);
         });
         currentFeatures.currentWiki = null;
         currentFeatures.currentWifi = null;
@@ -120,8 +129,8 @@ function showPath(){
         
         var bounds = new google.maps.LatLngBounds();
         for(i = 0; i < parsedData.geometry.coordinates.length; i++){
-        	var point = parsedData.geometry.coordinates[i];
-        	bounds.extend({"lng": point[0], "lat": point[1]});
+          var point = parsedData.geometry.coordinates[i];
+          bounds.extend({"lng": point[0], "lat": point[1]});
         }
         map.setCenter(bounds.getCenter());
         map.fitBounds(bounds);
@@ -130,20 +139,21 @@ function showPath(){
         hideMessage(messageElem);
     });
 }
-
 function getSelectedActivity() {
     var sp = $(".selectedPath").attr("value");
     if(sp === undefined) {
-        var msg = "No activity selected.";
-        showMessage(msg, true);
-        setTimeout(function(){
-            hideMessage(msg);
-        }, 2000);
+        displayError("No activity selected.");
     }
     return sp;
 }
+function displayError(msg){
+    var elem = showMessage(msg, true);
+    setTimeout(function(){
+        hideMessage(elem);
+    }, 2000);
+}
 function showMessage(message, isErr){
-    var id = getId(message);
+    var id = message.replace(/\.| |#/g, '_');
     if($("#" + id).length !== 0){
         return;
     }
@@ -160,18 +170,10 @@ function showMessage(message, isErr){
     return p;
 }
 function hideMessage(messageElem){
-	messageElem.remove();
+    messageElem.remove();
     if($("#message").children().length === 0){
         $("#message").hide();
     }
-}
-function getId(message){
-    return message.replace(/\.| |#/g, '_');
-}
-function clearWiki(){
-    $("#wikiLogo").removeClass("selected");
-}
-function clearWiFi(){
 }
 function invokeODataAction(url, callback){
     $.post('http://localhost:8080/odata4/demo/' + url, "", callback);
