@@ -1,14 +1,243 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <vdb name="demo" version="1">
-    <import-vdb name="strava" version="1" />
-    <import-vdb name="wifileaks" version="1" />
 
-    <model name="Demo" type="VIRTUAL">
+    <!-- mediawiki models -->
+    <model name="WS">
+        <source name="webservice" translator-name="ws"
+            connection-jndi-name="java:/rest-wiki" />
+    </model>
+    <model name="mediawiki" type="VIRTUAL">
         <metadata type="DDL"><![CDATA[
-            CREATE VIEW wifi_spots_around_route(activity_id integer,RESPONSE clob) AS
-            WITH cte AS (SELECT a.id, ST_CONVEXHULL(a.route) as area FROM activity_geo a) SELECT a.id, JSONARRAY_AGG(JSONOBJECT(s.ssid,ST_AsGeoJSON(s.position))) FROM cte a, wifi_spots s WHERE ST_CONTAINS(a.area,s.position) GROUP BY a.id;
-            CREATE VIEW media_wikis_around_route(activity_id integer, RESPONSE clob) AS
-            SELECT a.id, JSONARRAY_AGG(JSONOBJECT(m.id, m.title, m.url, m.img_url, ST_AsGeoJSON(m.position))) FROM activity_geo a, media_wiki m WHERE ST_CONTAINS(ST_CONVEXHULL(a.route),m.position) GROUP BY a.id;
+            CREATE VIRTUAL PROCEDURE getMediaWikiData(convexHull geometry) RETURNS (page_id integer, title string,  lat bigdecimal, lon bigdecimal, url string, image_url string)
+            AS
+            BEGIN
+                DECLARE blob result;
+                DECLARE string query = '?action=query&format=xml&prop=info%7Cextracts%7Ccoordinates%7Cpageprops&generator=geosearch&utf8=1&inprop=url&explaintext=1&ggscoord=';
+
+                DECLARE geometry center = ST_Centroid(convexHull);
+                DECLARE geometry ringPoint = ST_EndPoint(ST_ExteriorRing(convexHull));
+                
+                DECLARE double latDiff = ST_X(ringPoint) - ST_X(center);
+                DECLARE double lonDiff = ST_Y(ringPoint) - ST_Y(center);
+                
+                DECLARE bigdecimal a = POWER(SIN(RADIANS(latDiff/2)), 2) + COS(RADIANS(ST_X(center))) * COS(RADIANS(ST_X(ringPoint))) * POWER(SIN(RADIANS(lonDiff/2)),2);
+                DECLARE bigdecimal distance = 6371000 * 2 * ATAN2(SQRT(a), SQRT(1-a));
+                distance = distance*1.5;
+
+                IF (distance > 10000)
+                BEGIN
+                    distance = 10000;
+                END
+                
+                DECLARE string coord = ST_Y(center) || '%7C' || ST_X(center) || '&ggsradius=' || CONVERT(distance, integer);
+                
+                
+                RAISE SQLWARNING SQLEXCEPTION (query || coord);
+                
+                result = call WS.invokeHTTP(action=>'GET', endpoint=>query || coord);
+                
+                SELECT page_id, title,  lat, lon, url, url || '#/media/File:' || image as image_url FROM
+                xmltable('/api/query/pages/page' PASSING xmlparse(document result)  COLUMNS
+                    page_id integer PATH '@pageid',
+                    title string PATH '@title',
+                    lat bigdecimal PATH 'coordinates/co/@lat',
+                    lon bigdecimal PATH 'coordinates/co/@lon',
+                    url string PATH '@fullurl',
+                    image string PATH 'pageprops/@page_image_free') as wikiData;
+            END;
+            ]]>
+        </metadata>
+    </model>
+
+    <!-- wifileaks models -->
+    <model name="Wifileaks" type="VIRTUAL">
+        <property name="imports" value="GeoData" />
+        <metadata type="DDL"><![CDATA[
+            SET NAMESPACE 'http://www.teiid.org/translator/spatial/2015' AS teiid_spatial;
+            CREATE VIEW wifi_spots (
+                W_ID integer,
+                MAC string(4000) OPTIONS(NAMEINSOURCE 'MAC', UPDATABLE 'FALSE'),
+                SSID string(4000) OPTIONS(NAMEINSOURCE 'SSID', UPDATABLE 'FALSE'),
+                SEC string(4000) OPTIONS(NAMEINSOURCE 'SEC', UPDATABLE 'FALSE'),
+                UPDATED timestamp OPTIONS(NAMEINSOURCE 'UPDATED', UPDATABLE 'FALSE'),
+                POSITION geometry OPTIONS(NAMEINSOURCE 'POSITION', UPDATABLE 'FALSE', "teiid_spatial:srid" '101')
+            ) OPTIONS(
+                UPDATABLE 'FALSE', 
+                MATERIALIZED 'TRUE',
+                "teiid_rel:ALLOW_MATVIEW_MANAGEMENT" 'TRUE'
+            )
+            AS
+                SELECT
+                A.W_ID, A.MAC, A.SSID, A.SEC, A.UPDATED, ST_GeomFromText('POINT('||A.LNG||' '||A.LAT||')', 4326) AS POSITION
+                FROM
+                (EXEC GeoData.getTextFiles('wifileaks.tsv')) AS f, TEXTTABLE(f.file COLUMNS MAC string, SSID string, SEC string, LAT string, LNG string, ALT string, UPDATED timestamp, W_ID FOR ORDINALITY DELIMITER '\u0009' QUOTE '\u0000') AS A 
+                WHERE UPDATED >= {d'2016-01-01'}
+
+            CREATE VIEW wifi_spots_geojson(
+                MAC string(4000),
+                SSID string(4000),
+                UPDATED timestamp,
+                POSITION clob
+            )
+            AS SELECT MAC, SSID, UPDATED, ST_AsGeoJSON(POSITION) FROM wifi_spots;
         ]]></metadata>
     </model>
+    <model name="GeoData">
+        <source connection-jndi-name="GeoData_DS" name="GeoData"
+            translator-name="file" />
+        <metadata type="DDL"><![CDATA[
+            CREATE FOREIGN PROCEDURE getTextFiles (pathAndExt string(4000)) RETURNS TABLE (file clob, filePath string(4000))
+        ]]></metadata>
+    </model>
+
+    <!-- strava models -->
+    <model name="strava">
+        <property name="importer.importWSDL" value="false" />
+        <source name="strava" translator-name="rest"
+            connection-jndi-name="java:/strava-ds" />
+    </model>
+    <model name="Activity" type="VIRTUAL">
+        <metadata type="DDL"><![CDATA[
+        CREATE VIEW activity_list(id integer PRIMARY KEY, name string, created_at string, latlng boolean) AS
+        SELECT activity.id, activity.name, activity.created_at, latlng.start_lng IS NOT NULL FROM (call strava.invokeHTTP(endpoint=>'activities', action=>'GET')) response,
+XMLTABLE('/strava/strava' passing JSONTOXML('strava', response.result) columns
+            id integer PATH 'id',
+            created_at string PATH 'start_date',
+            name string PATH 'name',
+            start_latlng string[] PATH 'start_latlng') activity, arraytable(activity.start_latlng COLUMNS start_lat string,start_lng string) latlng;
+
+        CREATE VIEW activity_geo(id integer PRIMARY KEY, route geometry) AS
+        SELECT t1.id, t2.route FROM (SELECT id FROM activity_list WHERE latlng=true) as t1, TABLE(call activity_geo_unsafe(t1.id)) as t2;
+
+        CREATE VIEW activity_geo_geojson(id integer PRIMARY KEY, route clob) AS
+        SELECT id, ST_AsGeoJSON(route) from activity_geo;
+
+        CREATE VIRTUAL PROCEDURE activity_geo_unsafe(in id integer) returns table (activity_id integer, route geometry) AS
+        BEGIN
+            DECLARE string endpoint;
+            endpoint='activities/' || id || '/streams/latlng?resolution=low';
+            SELECT id, ST_GeomFromText('LINESTRING (' || CAST(STRING_AGG(geo.lng || ' ' || geo.lat, ',') AS STRING) || ')', 4326) as route FROM (call strava.invokeHTTP(endpoint=>endpoint, action=>'GET')) response,
+            XMLTABLE('/stream/stream/data[preceding-sibling::type[text()=''latlng'']]' passing JSONTOXML('stream', response.result) columns
+                lat string PATH 'data[1]',
+                lng string PATH 'data[2]') as geo;
+        END
+        ]]></metadata>
+    </model>
+
+    <!-- putting it all together -->
+    <model name="Demo" type="VIRTUAL">
+        <metadata type="DDL"><![CDATA[
+            CREATE VIEW wifi_spots_around_route(activity_id integer PRIMARY KEY, RESPONSE clob) AS
+            WITH cte AS (
+                SELECT a.id, a.route as route FROM activity_geo a
+            )
+            SELECT 
+                a.id, 
+                JSONOBJECT(
+                    'FeatureCollection' as "type", 
+                    JSONARRAY_AGG(
+                        JSONOBJECT(
+                            'Feature' as "type",
+                            w.w_id as "id",
+                            JSONOBJECT(w.ssid as "name") as "properties",
+                            ST_AsGeoJSON(w.position) as "geometry")
+                    ) as "features"
+                )
+            FROM cte a, wifi_spots w 
+            WHERE st_distance(a.route, w.position) < 0.008
+            GROUP BY a.id;
+           
+
+
+            CREATE VIEW activity_route(id integer PRIMARY KEY, RESPONSE clob) AS
+            SELECT 
+                a.id, JSONOBJECT('Feature' as "type", ST_AsGeoJson(a.route) as "geometry") as route FROM activity_geo a;
+            
+            
+            CREATE VIEW wikis_around_route(activity_id integer PRIMARY KEY, RESPONSE clob) AS
+            WITH cte AS (
+                SELECT a.id, ST_Envelope(a.route) as area FROM activity_geo a
+            )
+            SELECT 
+                a.id,
+                JSONOBJECT(
+                    'FeatureCollection' as "type", 
+                    JSONARRAY_AGG(
+                        JSONOBJECT(
+                            'Feature' as "type",
+                            w.page_id as "id",
+                            JSONOBJECT(w.title as "name", w.page_id as "page_id", w.url as "url", w.image_url as "image_url") as "properties",
+                            ST_AsGeoJSON(ST_Point(CAST(w.lon AS double), CAST(w.lat AS double))) as "geometry"
+                        )
+                    ) as "features"
+                )
+            FROM cte a LEFT JOIN LATERAL (exec getMediaWikiData(a.area)) w ON true
+            GROUP BY a.id;
+
+
+            CREATE VIRTUAL FUNCTION geography_distance(g1 geometry, g2 geometry) RETURNS bigdecimal AS BEGIN
+                DECLARE double latDiff = ST_X(g1) - ST_X(g2);
+                DECLARE double lonDiff = ST_Y(g1) - ST_Y(g2);
+                
+                DECLARE bigdecimal a = POWER(SIN(RADIANS(latDiff/2)), 2) + COS(RADIANS(ST_X(g1))) * COS(RADIANS(ST_X(g2))) * POWER(SIN(RADIANS(lonDiff/2)),2);
+                DECLARE bigdecimal distance = 6371000 * 2 * ATAN2(SQRT(a), SQRT(1-a));
+                
+                RETURN distance;
+            END;
+            
+            
+            CREATE VIRTUAL PROCEDURE save_wiki_articles(activity_id integer) RETURNS string AS BEGIN
+                INSERT INTO GoogleSheetsExport.WikiData(pageid, title, lat, lon, url, image) 
+                    SELECT w.page_id, w.title, w.lat, w.lon, w.url, w.image_url
+                    FROM activity_geo a LEFT JOIN LATERAL (exec getMediaWikiData(ST_envelope(a.route))) w ON true 
+                    WHERE a.id = activity_id;
+                RETURN 'done';
+            END
+
+        ]]></metadata>
+    </model>
+
+    <!-- google sheets models -->
+    <model name="GoogleSheetsSource" type="PHYSICAL" visible="false">
+        <source name="Source" translator-name="google-spreadsheet" connection-jndi-name="java:/gs-export" />
+        <metadata type="DDL">
+        <![CDATA[
+        CREATE FOREIGN TABLE WikiData(
+        pageid integer OPTIONS (NATIVE_TYPE 'NUMBER'),
+        title string OPTIONS (NATIVE_TYPE 'STRING'),
+        lat bigdecimal OPTIONS (NATIVE_TYPE 'NUMBER'),
+        lon bigdecimal OPTIONS (NATIVE_TYPE 'NUMBER'),
+        url string OPTIONS (NATIVE_TYPE 'STRING'),
+        image string OPTIONS (NATIVE_TYPE 'STRING')
+        ) OPTIONS (UPDATABLE 'TRUE', NAMEINSOURCE 'WikiData');
+        ]]>
+        </metadata>
+    </model>
+    <model name="GoogleSheetsExport" type="VIRTUAL">
+        <metadata type="DDL">
+        <![CDATA[
+        CREATE VIEW WikiData (
+        pageid integer PRIMARY KEY,
+        title string,
+        lat bigdecimal,
+        lon bigdecimal,
+        url string,
+        image string
+        ) OPTIONS (UPDATABLE 'TRUE') 
+        AS
+        SELECT
+            pageid, title, lat, lon, url, image
+        FROM
+            GoogleSheetsSource.WikiData;
+        ]]>
+        </metadata>
+    </model>
+
+
+    <!-- translator overrides -->
+    <translator name="rest" type="ws">
+        <property name="DefaultBinding" value="HTTP" />
+        <property name="DefaultServiceMode" value="MESSAGE" />
+    </translator>
+
 </vdb>
