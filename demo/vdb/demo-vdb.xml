@@ -3,12 +3,50 @@
     <import-vdb name="strava" version="1" />
     <import-vdb name="wifileaks" version="1" />
 
+    <model name="GeoH2">
+        <source name="GeoH2" translator-name="h2"
+            connection-jndi-name="java:jboss/datasources/GeoH2" />
+    </model>
+
     <model name="Demo" type="VIRTUAL">
         <metadata type="DDL"><![CDATA[
-            CREATE VIEW wifi_spots_around_route(activity_id integer,RESPONSE clob) AS
-            WITH cte AS (SELECT a.id, ST_CONVEXHULL(a.route) as area FROM activity_geo a) SELECT a.id, JSONARRAY_AGG(JSONOBJECT(s.ssid,ST_AsGeoJSON(s.position))) FROM cte a, wifi_spots s WHERE ST_CONTAINS(a.area,s.position) GROUP BY a.id;
-            CREATE VIEW media_wikis_around_route(activity_id integer, RESPONSE clob) AS
-            SELECT a.id, JSONARRAY_AGG(JSONOBJECT(m.id, m.title, m.url, m.img_url, ST_AsGeoJSON(m.position))) FROM activity_geo a, media_wiki m WHERE ST_CONTAINS(ST_CONVEXHULL(a.route),m.position) GROUP BY a.id;
+            CREATE VIEW wifi_spots_around_route(activity_id integer, RESPONSE clob) AS
+            WITH cte AS (SELECT a.id, a.route as route FROM activity_geo a)
+             SELECT a.id, JSONARRAY_AGG(JSONOBJECT('Feature' as "type", JSONOBJECT(w.ssid as "ssid") as "properties", ST_AsGeoJSON(w.position) as "geometry"))
+             FROM cte a, wifi_spots w WHERE st_distance(a.route, w.position) < 0.014 GROUP BY a.id;
+            
+            CREATE VIEW wifi_spots_debug_1(activity_id integer,RESPONSE clob) AS
+            WITH cte AS (SELECT a.id, ST_CONVEXHULL(a.route) as area FROM activity_geo a)
+             SELECT a.id, st_astext(a.area) FROM cte a;
+             
+             
+            CREATE VIRTUAL FUNCTION geography_distance(g1 geometry, g2 geometry) RETURNS bigdecimal AS BEGIN
+                DECLARE double latDiff = ST_X(g1) - ST_X(g2);
+                DECLARE double lonDiff = ST_Y(g1) - ST_Y(g2);
+                
+                DECLARE bigdecimal a = POWER(SIN(RADIANS(latDiff/2)), 2) + COS(RADIANS(ST_X(g1))) * COS(RADIANS(ST_X(g2))) * POWER(SIN(RADIANS(lonDiff/2)),2);
+                DECLARE bigdecimal distance = 6371000 * 2 * ATAN2(SQRT(a), SQRT(1-a));
+                
+                RETURN distance;
+            END;
+            
+            CREATE VIRTUAL FUNCTION grow_envelope(g1 geometry) RETURNS geometry AS BEGIN
+                DECLARE geometry origEnvLine = ST_ExteriorRing(ST_Envelope(g1));
+                DECLARE geometry bottomLeft = ST_PointN(origEnvLine, 1);
+                DECLARE geometry topRight = ST_PointN(origEnvLine, 3);
+                
+                return ST_Union(bottomLeft, topRight);
+            END
+            
+    
+            CREATE VIRTUAL FUNCTION envelope_radius(g1 geometry) RETURNS bigdecimal AS BEGIN
+                DECLARE geometry origEnvLine = ST_ExteriorRing(ST_Envelope(g1));
+                DECLARE geometry bottomLeft = ST_PointN(origEnvLine, 1);
+                DECLARE geometry topRight = ST_PointN(origEnvLine, 3);
+                
+                return geography_distance(bottomLeft, topRight) / 1;
+            END
+
         ]]></metadata>
     </model>
 </vdb>
