@@ -87,12 +87,11 @@ function toggleFeatures(featureList) {
 	return false;
 }
 
-function exportToGoogle(){
-    doForSelectedActivity(function(act){
-        invokeODataAction("p", function(data){
-            console.log(data);
-        }, {name:"aaa"});
-    }, "Exporting information to Google Sheet");
+function exportToGoogle() {
+	var messageElem = showMessage("Exporting information to Google Sheet");
+	invokeODataAction("Demo/save_wiki_articles(activity_id=" + getSelectedActivity() + ")", function(data) {
+	        hideMessage(messageElem);
+		});
 
 }
 function selectPath(id){
@@ -111,8 +110,12 @@ function showPath(){
         map.data.forEach(function(feat){
         	map.data.remove(feat);
         });
-        currentFeatures.currentWifi = null;
         currentFeatures.currentWiki = null;
+        currentFeatures.currentWifi = null;
+        
+        $("#wikiLogo").removeClass("selected");
+        $("#wifiLogo").removeClass("selected");
+        
         var parsedData = JSON.parse(data);
         
         var bounds = new google.maps.LatLngBounds();
@@ -166,15 +169,12 @@ function getId(message){
     return message.replace(/\.| |#/g, '_');
 }
 function clearWiki(){
-	currentWiki = null;
     $("#wikiLogo").removeClass("selected");
 }
 function clearWiFi(){
-	currentWifi = null;
-    $("#wifiLogo").removeClass("selected");
 }
-function invokeODataAction(url, callback, data){
-    $.post('http://localhost:8080/odata4/demo/' + url, JSON.stringify(data), callback);
+function invokeODataAction(url, callback){
+    $.post('http://localhost:8080/odata4/demo/' + url, "", callback);
 }
 function invokeOData(url, callback){
     $.get('http://localhost:8080/odata4/demo/' + url, callback);

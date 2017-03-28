@@ -63,7 +63,8 @@
                 POSITION geometry OPTIONS(NAMEINSOURCE 'POSITION', UPDATABLE 'FALSE', "teiid_spatial:srid" '101')
             ) OPTIONS(
                 UPDATABLE 'FALSE', 
-                MATERIALIZED 'TRUE'
+                MATERIALIZED 'TRUE',
+                "teiid_rel:ALLOW_MATVIEW_MANAGEMENT" 'TRUE'
             )
             AS
                 SELECT
@@ -143,8 +144,9 @@ XMLTABLE('/strava/strava' passing JSONTOXML('strava', response.result) columns
                     ) as "features"
                 )
             FROM cte a, wifi_spots w 
-            WHERE st_distance(a.route, w.position) < 0.014
+            WHERE st_distance(a.route, w.position) < 0.008
             GROUP BY a.id;
+           
 
 
             CREATE VIEW activity_route(id integer PRIMARY KEY, RESPONSE clob) AS
@@ -182,8 +184,53 @@ XMLTABLE('/strava/strava' passing JSONTOXML('strava', response.result) columns
                 
                 RETURN distance;
             END;
+            
+            
+            CREATE VIRTUAL PROCEDURE save_wiki_articles(activity_id integer) RETURNS string AS BEGIN
+                INSERT INTO GoogleSheetsExport.WikiData(pageid, title, lat, lon, url, image) 
+                    SELECT w.page_id, w.title, w.lat, w.lon, w.url, w.image_url
+                    FROM activity_geo a LEFT JOIN LATERAL (exec getMediaWikiData(ST_envelope(a.route))) w ON true 
+                    WHERE a.id = activity_id;
+                RETURN 'done';
+            END
 
         ]]></metadata>
+    </model>
+
+    <!-- google sheets models -->
+    <model name="GoogleSheetsSource" type="PHYSICAL" visible="false">
+        <source name="Source" translator-name="google-spreadsheet" connection-jndi-name="java:/gs-export" />
+        <metadata type="DDL">
+        <![CDATA[
+        CREATE FOREIGN TABLE WikiData(
+        pageid integer OPTIONS (NATIVE_TYPE 'NUMBER'),
+        title string OPTIONS (NATIVE_TYPE 'STRING'),
+        lat bigdecimal OPTIONS (NATIVE_TYPE 'NUMBER'),
+        lon bigdecimal OPTIONS (NATIVE_TYPE 'NUMBER'),
+        url string OPTIONS (NATIVE_TYPE 'STRING'),
+        image string OPTIONS (NATIVE_TYPE 'STRING')
+        ) OPTIONS (UPDATABLE 'TRUE', NAMEINSOURCE 'WikiData');
+        ]]>
+        </metadata>
+    </model>
+    <model name="GoogleSheetsExport" type="VIRTUAL">
+        <metadata type="DDL">
+        <![CDATA[
+        CREATE VIEW WikiData (
+        pageid integer PRIMARY KEY,
+        title string,
+        lat bigdecimal,
+        lon bigdecimal,
+        url string,
+        image string
+        ) OPTIONS (UPDATABLE 'TRUE') 
+        AS
+        SELECT
+            pageid, title, lat, lon, url, image
+        FROM
+            GoogleSheetsSource.WikiData;
+        ]]>
+        </metadata>
     </model>
 
 
