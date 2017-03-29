@@ -49,7 +49,9 @@ Wifileaks is a community project that provides a list of free wifi spots.
 
 ### About
 
-Here we define connector and VDB for exporting data to Google Sheet.
+Here we define connector and VDB for exporting data to Google Sheet. To export data to your google spreadsheet, create spreadsheet with name OpenHouseApp and sheet WikiData. There you need to create columns with names 'pageid', 'title', 'lat', 'lon', 'url', 'image'. Next, follow steps in [Teiid Documentation](https://teiid.gitbooks.io/documents/content/admin/Google_Spreadsheet_Data_Sources.html)
+ to provide google translator with access to your sheets and ob
+tain the refresh token.
 
 ### Instructions
 
