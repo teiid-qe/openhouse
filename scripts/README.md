@@ -53,5 +53,7 @@ Here we define connector and VDB for exporting data to Google Sheet.
 
 ### Instructions
 
-1. Update `gs-export.properties`.
-2. Run `bin/jboss-cli.sh -c --file=gs-export.cli --properties=gs-export.properties`.
+1. To export data to your google spreadsheet, create spreadsheet with name OpenHouseApp and sheet WikiData. There you need to create columns with names pageid, title, lat, lon, url, image.
+2. Follow steps in [Teiid Documentation](https://teiid.gitbooks.io/documents/content/admin/Google_Spreadsheet_Data_Sources.html) to provide google translator with access to your sheets and obtain the refresh token.
+3. Update `gs-export.properties` with refresh token obtained in step 2.
+4. Run `bin/jboss-cli.sh -c --file=gs-export.cli --properties=gs-export.properties`.
