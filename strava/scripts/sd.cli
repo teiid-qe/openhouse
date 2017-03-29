@@ -1,6 +1,0 @@
-batch
-/subsystem=security/security-domain=sd-oauth2-strava:add()
-/subsystem=security/security-domain=sd-oauth2-strava/authentication=classic:add()
-/subsystem=security/security-domain=sd-oauth2-strava/authentication=classic/login-module=strava-lm1:add(code=org.teiid.jboss.oauth.OAuth20LoginModule, flag=required, module=org.jboss.teiid.security,module-options={[client-id=>${strava.client.id},client-secret=>${strava.client.secret},access-token=>${strava.access.token}]})
-run-batch
-reload
