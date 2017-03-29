@@ -3,6 +3,7 @@ var currentWiki = null;
 var currentWifi = null;
 var currentFeatures = {"currentWifi": null, "currentWiki": null};
 var lastEven = null;
+var win = null;
 
 $(document).ready(function(){
     $.ajaxSetup({
@@ -31,11 +32,13 @@ $(document).ready(function(){
                 elem.append(option);
             }
         }
+    }, function(xhr, status, error){
+        displayError("Cannot load paths.");
     });
 });
 function initMap() {
     map = new google.maps.Map(document.getElementById('map'), {zoom: 13, center: {lat: 49.2309837, lng: 16.5767087}});
-    var win = new google.maps.InfoWindow({pixelOffset: {width: 0, height: -30}});
+    win = new google.maps.InfoWindow({pixelOffset: {width: 0, height: -30}});
     map.data.addListener('click', function(event) {
         var featureName = event.feature.getProperty('name');
         if(featureName){
@@ -49,6 +52,13 @@ function initMap() {
             win.open(map);
         } else {
             win.close();
+        }
+    });
+    map.data.setStyle(function(feature){
+        if(feature.getProperty("url")){
+            return {icon: "http://maps.google.com/mapfiles/ms/icons/red-dot.png"};
+        } else {
+            return {icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"};
         }
     });
 }
@@ -70,6 +80,8 @@ function loadAndToggleFeatures(featureName, featureTable, featureDescription, fe
             currentFeatures[featureName] = map.data.addGeoJson(parsedData);
             $(featureButton).addClass("selected");
             hideMessage(messageElem);
+      }, function(xhr, status, error){
+          hideMessage(messageElem);
       });
   } else {
       var featureShown = toggleFeatures(currentFeatures[featureName]);
@@ -92,41 +104,22 @@ function toggleFeatures(featureList) {
     }
     return false;
 }
-
-function exportToGoogle() {
-    var act = getSelectedActivity();
-    if(act === undefined){
-        return;
-    }
-    var messageElem = showMessage("Exporting information from Wikipedia to Google Sheet");
-    invokeODataAction("Demo/save_wiki_articles(activity_id=" + act + ")", function(data) {
-            hideMessage(messageElem);
-    });
-}
-function selectPath(id){
-    if(!$("#" + id).hasClass("selectedPath")){
-        $(".selectedPath").removeClass("selected").removeClass("selectedPath");
-        $("#" + id).addClass("selectedPath").addClass("selected")
-        showPath();
-    }
-}
-
 function showPath(){
     var messageElem = showMessage("Loading path");
     var act = getSelectedActivity();
     invokeOData("Demo/activity_route(" + act + ")/RESPONSE", function(data){
-      
         map.data.forEach(function(feat){
-          map.data.remove(feat);
+            map.data.remove(feat);
         });
         currentFeatures.currentWiki = null;
         currentFeatures.currentWifi = null;
-        
+        win.close();
+
         $("#wikiLogo").removeClass("selected");
         $("#wifiLogo").removeClass("selected");
-        
+
         var parsedData = JSON.parse(data);
-        
+
         var bounds = new google.maps.LatLngBounds();
         for(i = 0; i < parsedData.geometry.coordinates.length; i++){
           var point = parsedData.geometry.coordinates[i];
@@ -134,10 +127,32 @@ function showPath(){
         }
         map.setCenter(bounds.getCenter());
         map.fitBounds(bounds);
-        
+
         map.data.addGeoJson(parsedData);
         hideMessage(messageElem);
+    }, function(xhr, status, error){
+        hideMessage(messageElem);
     });
+}
+function exportToGoogle() {
+    var act = getSelectedActivity();
+    if(act === undefined){
+        return;
+    }
+    var messageElem = showMessage("Exporting information from Wikipedia to Google Sheet");
+    invokeODataFunction("Demo/save_wiki_articles(activity_id=" + act + ")",
+        function(data) {
+            hideMessage(messageElem);
+        }, function(xhr, status, error) {
+            hideMessage(messageElem);
+        });
+}
+function selectPath(id){
+    if(!$("#" + id).hasClass("selectedPath")){
+        $(".selectedPath").removeClass("selected").removeClass("selectedPath");
+        $("#" + id).addClass("selectedPath").addClass("selected")
+        showPath();
+    }
 }
 function getSelectedActivity() {
     var sp = $(".selectedPath").attr("value");
@@ -175,9 +190,11 @@ function hideMessage(messageElem){
         $("#message").hide();
     }
 }
-function invokeODataAction(url, callback){
-    $.post('http://localhost:8080/odata4/demo/' + url, "", callback);
+function invokeODataFunction(url, success, fail){
+    $.post('http://localhost:8080/odata4/demo/' + url, "", success)
+        .fail(fail);
 }
-function invokeOData(url, callback){
-    $.get('http://localhost:8080/odata4/demo/' + url, callback);
+function invokeOData(url, success, fail){
+    $.get('http://localhost:8080/odata4/demo/' + url, success)
+        .fail(fail);
 }
