@@ -11,7 +11,7 @@ $(document).ready(function(){
                 displayError("An error occurred: " + status + " Error: " + error);
             }
     });
-    invokeOData('Activity/activity_list?$select=name,id,created_at', function(data){
+    invokeOData("Activity/activity_list?$select=name,id,created_at&$filter=type eq 'Run'&$top=10", function(data){
         var elem = $("#pathSelectorDiv").empty();
         if(data.value.length === 0){
             elem.text("No paths to show")

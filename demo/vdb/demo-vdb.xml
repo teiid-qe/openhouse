@@ -95,12 +95,13 @@
     </model>
     <model name="Activity" type="VIRTUAL">
         <metadata type="DDL"><![CDATA[
-        CREATE VIEW activity_list(id integer PRIMARY KEY, name string, created_at string, latlng boolean) AS
-        SELECT activity.id, activity.name, activity.created_at, latlng.start_lng IS NOT NULL FROM (call strava.invokeHTTP(endpoint=>'activities', action=>'GET')) response,
+        CREATE VIEW activity_list(id integer PRIMARY KEY, name string, type string, created_at string, latlng boolean) AS
+        SELECT activity.id, activity.name, activity.type, activity.created_at, latlng.start_lng IS NOT NULL FROM (call strava.invokeHTTP(endpoint=>'activities', action=>'GET')) response,
 XMLTABLE('/strava/strava' passing JSONTOXML('strava', response.result) columns
             id integer PATH 'id',
             created_at string PATH 'start_date',
             name string PATH 'name',
+            type string PATH 'type',
             start_latlng string[] PATH 'start_latlng') activity, arraytable(activity.start_latlng COLUMNS start_lat string,start_lng string) latlng;
 
         CREATE VIEW activity_geo(id integer PRIMARY KEY, route geometry) AS
